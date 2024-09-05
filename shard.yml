@@ -1,0 +1,14 @@
+name: hansa
+version: 0.1.0
+
+dependencies:
+  baked_file_system:
+    github: ralsina/baked_file_system
+    branch: master
+
+authors:
+  - Roberto Alsina <roberto.alsina@gmail.com>
+
+crystal: '>= 1.13.1'
+
+license: MIT
