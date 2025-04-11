@@ -195,5 +195,3 @@ module Hansa
     end
   end
 end
-
-puts Hansa.classify(File.read(ARGV[0]))

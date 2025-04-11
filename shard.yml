@@ -6,6 +6,10 @@ dependencies:
     github: ralsina/baked_file_system
     branch: master
 
+targets:
+  hansa:
+    main: src/main.cr
+
 authors:
   - Roberto Alsina <roberto.alsina@gmail.com>
 

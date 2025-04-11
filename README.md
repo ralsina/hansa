@@ -30,6 +30,8 @@ require "hansa"
 puts Hansa.classify(File.read(ARGV[0]))   # => "Ruby"
 ```
 
+There is a "hansa" command line tool that can be used to classify files.
+
 ## Development
 
 I don't expect to do much more development here.
