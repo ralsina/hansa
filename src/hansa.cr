@@ -31,7 +31,7 @@ module Hansa
     # common languages in the corpus, to avoid super
     # unilely false positives for obscure languages
     def known_languages : Array(String)
-      languages_log_probabilities.keys.sort_by { |lang| languages_log_probabilities[lang] }[-100..]
+      languages_log_probabilities.keys.sort_by! { |lang| languages_log_probabilities[lang] }[-100..]
     end
 
     def classify(content : String)
