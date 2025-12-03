@@ -15,7 +15,7 @@ module Hansa
   # in the actual binary so we don't have to carry it around.
   class BakedData
     extend BakedFileSystem
-    bake_file "frequencies.json", File.read("#{__DIR__}/frequencies.json")
+    bake_file "frequencies.json", {{ read_file "#{__DIR__}/frequencies.json" }}
   end
 
   alias ScoredLanguage = {String, Float64}
