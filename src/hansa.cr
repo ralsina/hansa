@@ -20,6 +20,11 @@ module Hansa
 
   alias ScoredLanguage = {String, Float64}
 
+  # Default probability for tokens not present in a language's
+  # token table, inherited from go-enry's training corpus size
+  DEFAULT_TOKEN_PROBABILITY   = Math.log(1 / 2316853)
+  DEFAULT_TOKEN_PROBABILITIES = {} of String => Float64
+
   struct Classifier
     include JSON::Serializable
     @[JSON::Field(key: "LanguagesLogProbabilities")]
@@ -27,11 +32,13 @@ module Hansa
     @[JSON::Field(key: "TokensLogProbabilities")]
     property tokens_log_probabilities : Hash(String, Hash(String, Float64))
 
+    @known_languages : Array(String)? = nil
+
     # Despite the name this only reports the 100 most
     # common languages in the corpus, to avoid super
     # unilely false positives for obscure languages
     def known_languages : Array(String)
-      languages_log_probabilities.keys.sort_by! { |lang| languages_log_probabilities[lang] }[-100..]
+      @known_languages ||= languages_log_probabilities.keys.sort_by! { |language| languages_log_probabilities[language] }[-100..]
     end
 
     def classify(content : String)
@@ -49,9 +56,11 @@ module Hansa
 
     def tokens_log_probability(tokens : Array(String), language : String) : Float64
       log_probability = 0.0
+      language_tokens = CLASSIFIER.tokens_log_probabilities.fetch(language, DEFAULT_TOKEN_PROBABILITIES)
+      default_probability = DEFAULT_TOKEN_PROBABILITY
 
       tokens.each do |token|
-        log_probability += CLASSIFIER.tokens_log_probabilities.fetch(language, {} of String => Float64).fetch(token, Math.log(1/2316853))
+        log_probability += language_tokens.fetch(token, default_probability)
       end
 
       log_probability
@@ -191,7 +200,13 @@ module Hansa
     if code.empty?
       "Python" # whatever
     else
-      CLASSIFIER.classify(code).last[0]
+      CLASSIFIER.classify(scrub(code)).last[0]
     end
+  end
+
+  # Regexes fail on invalid UTF-8, so replace broken
+  # byte sequences with the unicode replacement character
+  private def self.scrub(code : String) : String
+    code.scrub
   end
 end
