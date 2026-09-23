@@ -5,6 +5,8 @@ dependencies:
   baked_file_system:
     github: ralsina/baked_file_system
     branch: master
+  docopt:
+    github: ralsina/docopt.cr
 
 targets:
   hansa:

@@ -30,7 +30,18 @@ require "hansa"
 puts Hansa.classify(File.read(ARGV[0]))   # => "Ruby"
 ```
 
-There is a "hansa" command line tool that can be used to classify files.
+There is a "hansa" command line tool that can be used to classify files:
+
+```
+$ hansa src/hansa.cr
+src/hansa.cr CoffeeScript
+
+$ printf '#!/bin/bash\necho hi\n' | hansa -
+- Shell
+```
+
+Run `hansa --help` for usage. Errors are reported on stderr with a
+non-zero exit code, and a file argument of `-` reads standard input.
 
 ## Development
 

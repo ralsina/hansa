@@ -1,10 +1,3 @@
-require "./hansa.cr"
+require "./cli"
 
-ARGV.each do |arg|
-  if File.file? arg
-    result = Hansa.classify(File.read(arg))
-    puts "#{arg} #{result}"
-  else
-    puts "File not found: #{arg}"
-  end
-end
+exit Hansa::CLI.run(ARGV)

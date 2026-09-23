@@ -38,8 +38,12 @@ Known classifier quirks, documented as specs rather than bugs:
   - `Hansa.classifier` exposes the lazily parsed `Classifier`; the
     JSON is parsed on first use, not at require time.
   - `Hansa.classify(code)` returns the top-scoring language name.
-- `src/main.cr` — minimal CLI: prints `file language` for each
-  argument that is an existing file.
+- `src/main.cr` — CLI entry point: `exit Hansa::CLI.run(ARGV)`.
+- `src/cli.cr` — the CLI itself (docopt-based): usage/help/version,
+  classifies each file argument, `-` reads standard input, errors go
+  to stderr with a non-zero exit code. Only reads the first 256KB of
+  each file since the classifier caps at 50K characters. `run` takes
+  injectable IOs so it is spec-tested directly.
 - `src/data/frequencies.json` — language/token log-probabilities. To
   regenerate it, check out go-enry next to this repo and run
   `python scripts/extract_constants.py` from the repo root.
