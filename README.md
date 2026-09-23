@@ -6,7 +6,17 @@ Just content, no filename, no extension, nothing else. There
 are other tools for that.
 
 This is a port of a piece of [go-enry](https://github.com/go-enry/go-enry)
-to Crystal.
+to Crystal, trained on the same Linguist corpus (go-enry v2.9.6).
+
+Before the classifier runs, two content-only strategies from go-enry
+v2 are consulted, in this order:
+
+1. Editor modelines (`# vim: set ft=ruby:`, `# -*- mode: python -*-`)
+   in the first or last 5 lines.
+2. Shebang lines, including `/usr/bin/env` indirection, with the
+   interpreter mapped through Linguist's table. A shebang naming one
+   language wins outright; ambiguous ones (perl → Perl/Pod) restrict
+   the classifier to those candidates.
 
 Paradoxically it will detect Crystal as Ruby but it's close enough ;-)
 

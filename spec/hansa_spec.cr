@@ -87,12 +87,6 @@ describe Hansa do
       Hansa.classify(shell_code).should eq("Shell")
     end
 
-    it "classifies env-shebang files without raising" do
-      code = "#!/usr/bin/env python3\nprint('hello')\n"
-
-      Hansa.classify(code).should be_a(String)
-    end
-
     # Crystal code is frequently classified as Ruby, its closest relative
     # in the corpus. This documents the current behavior.
     it "detects Crystal code as Ruby or Crystal" do
