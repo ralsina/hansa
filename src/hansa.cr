@@ -109,9 +109,14 @@ module Hansa
       re_shebang = /(?m)^#!(?:\/[0-9A-Za-z_]+)*\/(?:([0-9A-Za-z_]+)|[0-9A-Za-z_]+(?:\s*[0-9A-Za-z_]+=[0-9A-Za-z_]+\s*)*\s*([0-9A-Za-z_]+))(?:\s*-[0-9A-Za-z_]+\s*)*$/
       shebang_tokens = [] of String
       content.scan(re_shebang).each do |match|
-        if !match[1].empty?
-          shebang_tokens << "SHEBANG#!" + match[1]
-          break
+        # Env-style shebangs (#!/usr/bin/env ruby) match through the
+        # second capture group, so group 1 is nil and no SHEBANG token
+        # is emitted, mirroring go-enry.
+        if interpreter = match[1]?
+          if !interpreter.empty?
+            shebang_tokens << "SHEBANG#!" + interpreter
+            break
+          end
         end
       end
       content = content.gsub(re_shebang, ' ')
@@ -177,11 +182,9 @@ module Hansa
       ]
 
       regex_to_skip.each do |skip|
-        begin
-          content = content.gsub(skip, ' ')
-        rescue
-          # Sometimes regexes run into JIT limits
-        end
+        content = content.gsub(skip, ' ')
+      rescue
+        # Sometimes regexes run into JIT limits
       end
 
       {[] of String, content}

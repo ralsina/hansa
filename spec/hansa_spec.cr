@@ -22,13 +22,13 @@ describe Hansa do
             puts "Hello, #{@name}!"
           end
         end
-      CODE
+        CODE
 
       Hansa.classify(ruby_code).should eq("Ruby")
     end
 
     it "detects JavaScript" do
-      js_code = <<-'CODE'
+      js_code = <<-CODE
         const express = require('express');
         const app = express();
 
@@ -39,13 +39,13 @@ describe Hansa do
         app.listen(3000, () => {
           console.log("Server running on port 3000");
         });
-      CODE
+        CODE
 
       Hansa.classify(js_code).should eq("JavaScript")
     end
 
     it "detects Python" do
-      python_code = <<-'CODE'
+      python_code = <<-CODE
         import os
         import sys
 
@@ -55,7 +55,7 @@ describe Hansa do
 
         if __name__ == "__main__":
             main()
-      CODE
+        CODE
 
       Hansa.classify(python_code).should eq("Python")
     end
@@ -72,7 +72,7 @@ describe Hansa do
           <div id="root" class="container">Hello</div>
         </body>
         </html>
-      HTML
+        HTML
 
       Hansa.classify(html_code).should eq("HTML")
     end
@@ -82,26 +82,32 @@ describe Hansa do
         #!/bin/bash
         echo "hello"
         ls -la
-      SHELL
+        SHELL
 
       Hansa.classify(shell_code).should eq("Shell")
+    end
+
+    it "classifies env-shebang files without raising" do
+      code = "#!/usr/bin/env python3\nprint('hello')\n"
+
+      Hansa.classify(code).should be_a(String)
     end
 
     # Crystal code is frequently classified as Ruby, its closest relative
     # in the corpus. This documents the current behavior.
     it "detects Crystal code as Ruby or Crystal" do
-      crystal_code = <<-CRYSTAL
+      crystal_code = <<-'CRYSTAL'
         class Greeter
           def initialize(@name : String)
           end
 
           def greet
-            puts "Hello, \#{@name}!"
+            puts "Hello, #{@name}!"
           end
         end
 
         Greeter.new("world").greet
-      CRYSTAL
+        CRYSTAL
 
       ["Crystal", "Ruby"].should contain(Hansa.classify(crystal_code))
     end
@@ -116,7 +122,7 @@ describe Hansa do
         func main() {
             fmt.Println("Hello")
         }
-      GO
+        GO
 
       ["Go", "Golo"].should contain(Hansa.classify(go_code))
     end
@@ -165,6 +171,15 @@ describe Hansa do
       tokens = classifier.tokenize("#!/usr/bin/ruby\nputs 1")
 
       tokens.should contain("SHEBANG#!ruby")
+    end
+
+    # Env-style shebangs match through the regex's second capture group,
+    # so no SHEBANG token is emitted — same behavior as go-enry. The
+    # interpreter name (e.g. python3) has no corpus token anyway.
+    it "does not raise on env-style shebangs" do
+      tokens = classifier.tokenize("#!/usr/bin/env python3\nprint(1)")
+
+      tokens.should_not contain("SHEBANG#!python3")
     end
 
     it "tokenizes SGML tags and attributes" do
