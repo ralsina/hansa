@@ -1,5 +1,9 @@
 require "json"
 require "baked_file_system"
+require "./interpreter_table"
+require "./alias_table"
+require "./shebang"
+require "./modeline"
 
 # Hansa is a port of go-enry's language classification algorithm
 # It uses a naive bayes classifier to classify the language of a
@@ -22,9 +26,8 @@ module Hansa
 
   alias ScoredLanguage = {String, Float64}
 
-  # Default probability for tokens not present in a language's
-  # token table, inherited from go-enry's training corpus size
-  DEFAULT_TOKEN_PROBABILITY   = Math.log(1 / 2316853)
+  # Empty token table used as the fetch default for languages the
+  # corpus has no token probabilities for
   DEFAULT_TOKEN_PROBABILITIES = {} of String => Float64
 
   struct Classifier
@@ -33,6 +36,8 @@ module Hansa
     property languages_log_probabilities : Hash(String, Float64)
     @[JSON::Field(key: "TokensLogProbabilities")]
     property tokens_log_probabilities : Hash(String, Hash(String, Float64))
+    @[JSON::Field(key: "TokensTotal")]
+    property tokens_total : Float64
 
     @known_languages : Array(String)? = nil
 
@@ -43,11 +48,14 @@ module Hansa
       @known_languages ||= languages_log_probabilities.keys.sort_by! { |language| languages_log_probabilities[language] }[-100..]
     end
 
-    def classify(content : String)
+    # Scores the content over the candidate languages (go-enry v2
+    # "hints" semantics): with no candidates every known language
+    # competes, with candidates only those do.
+    def classify(content : String, candidates : Array(String) = [] of String)
       tokens = tokenize(content)
       scored_languages = [] of ScoredLanguage
 
-      known_languages.each do |language|
+      scoring_languages(candidates).each do |language|
         score = languages_log_probabilities[language]
         score += tokens_log_probability(tokens, language)
         scored_languages << {language, score}
@@ -59,13 +67,28 @@ module Hansa
     def tokens_log_probability(tokens : Array(String), language : String) : Float64
       log_probability = 0.0
       language_tokens = tokens_log_probabilities.fetch(language, DEFAULT_TOKEN_PROBABILITIES)
-      default_probability = DEFAULT_TOKEN_PROBABILITY
+      default_probability = default_token_probability
 
       tokens.each do |token|
         log_probability += language_tokens.fetch(token, default_probability)
       end
 
       log_probability
+    end
+
+    # Probability for tokens not present in a language's token
+    # table, derived from the corpus like go-enry v2 does
+    def default_token_probability : Float64
+      Math.log(1 / tokens_total)
+    end
+
+    private def scoring_languages(candidates : Array(String)) : Array(String)
+      return known_languages if candidates.empty?
+
+      resolved = candidates.map { |candidate| Hansa.language_by_alias(candidate) || candidate }
+        .select { |language| languages_log_probabilities.has_key?(language) }
+        .uniq!
+      resolved.empty? ? known_languages : resolved
     end
 
     def tokenize(content : String) : Array(String)
@@ -201,7 +224,15 @@ module Hansa
 
   @@classifier : Classifier?
 
-  # The classifier is built from ~7.9MB of baked JSON, so it is
+  # Resolves a language name or alias (vim ft=..., emacs mode:...)
+  # to a canonical language name; keys are lower case with
+  # whitespace replaced by underscores.
+  def self.language_by_alias(alias_name : String) : String?
+    key = alias_name.split(',')[0].gsub(' ', '_').downcase
+    LANGUAGE_BY_ALIAS[key]?
+  end
+
+  # The classifier is built from ~8.5MB of baked JSON, so it is
   # parsed on first use instead of at require time: programs that
   # never classify don't pay for it.
   def self.classifier : Classifier
@@ -212,7 +243,17 @@ module Hansa
     if code.empty?
       "Python" # whatever
     else
-      classifier.classify(scrub(code)).last[0]
+      code = scrub(code)
+
+      # Same strategy order as go-enry v2's content-only subset:
+      # modelines first, then shebangs; a strategy that resolves to
+      # a single language is decisive, several candidates restrict
+      # the classifier, none fall through to full classification.
+      candidates = Modeline.languages(code)
+      candidates = Shebang.languages(code) if candidates.empty?
+      return candidates.first if candidates.size == 1
+
+      classifier.classify(code, candidates).last[0]
     end
   end
 

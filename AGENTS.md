@@ -27,29 +27,35 @@ Known classifier quirks, documented as specs rather than bugs:
 
 ## Architecture
 
-- `src/hansa.cr` — the whole library:
+- `src/hansa.cr` — the library core:
   - `BakedData` embeds `src/data/frequencies.json` (the training
-    tables, ~7.9MB of JSON) into the binary at compile time. It is
+    tables, ~8.5MB of JSON) into the binary at compile time. It is
     gzipped at bake time and decompressed transparently on read.
   - `Classifier` tokenizes the first 50K characters (shebang, SGML
     tags, punctuation, operators, identifiers; comments and string
     and number literals are stripped) and scores the tokens with
-    naive Bayes over the 100 most common corpus languages.
-  - `Hansa.classifier` exposes the lazily parsed `Classifier`; the
-    JSON is parsed on first use, not at require time.
-  - `Hansa.classify(code)` returns the top-scoring language name.
+    naive Bayes over the 100 most common corpus languages. Scoring
+    can be restricted to candidate languages (go-enry v2 "hints").
+  - `Hansa.classify(code)` consults the content-only strategies
+    first — `Modeline` (vim/emacs), then `Shebang` (interpreter
+    table, `/usr/bin/env` handling) — and falls back to the
+    classifier. A strategy with a single result is decisive.
+- `src/shebang.cr`, `src/modeline.cr` — the strategies, ported from
+  go-enry v2. `src/interpreter_table.cr` and `src/alias_table.cr`
+  are generated tables; do not edit them by hand.
 - `src/main.cr` — CLI entry point: `exit Hansa::CLI.run(ARGV)`.
 - `src/cli.cr` — the CLI itself (docopt-based): usage/help/version,
   classifies each file argument, `-` reads standard input, errors go
   to stderr with a non-zero exit code. Only reads the first 256KB of
   each file since the classifier caps at 50K characters. `run` takes
   injectable IOs so it is spec-tested directly.
-- `src/data/frequencies.json` — language/token log-probabilities. To
-  regenerate it, check out go-enry next to this repo and run
-  `python scripts/extract_constants.py` from the repo root.
-- `spec/hansa_spec.cr` — expected values were verified against the
-  classifier output; when behavior intentionally changes, update the
-  specs to document the new expectation.
+- `src/data/frequencies.json` plus the two generated tables come
+  from a go-enry checkout: check out go-enry (currently v2.9.6) next
+  to this repo and run `python scripts/extract_constants.py` from
+  the repo root.
+- `spec/` — expected values were verified against the classifier
+  output; when behavior intentionally changes, update the specs to
+  document the new expectation.
 
 ## Workflow Rules
 
