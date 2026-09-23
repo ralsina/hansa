@@ -36,4 +36,4 @@ for line in open("go-enry/data/frequencies.go"):
             # print(key,value)
             current[key] = float(value)
 
-open ("frequencies.json", "w").write(json.dumps(data, indent=4))
+open ("src/data/frequencies.json", "w").write(json.dumps(data, indent=4))

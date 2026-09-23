@@ -13,9 +13,11 @@ module Hansa
 
   # The `BakedData` class embeds the languages probabilities
   # in the actual binary so we don't have to carry it around.
+  # baked_file_system gzips the data at compile time and
+  # decompresses it transparently when read.
   class BakedData
     extend BakedFileSystem
-    bake_file "frequencies.json", {{ read_file "#{__DIR__}/frequencies.json" }}
+    bake_folder "data"
   end
 
   alias ScoredLanguage = {String, Float64}
@@ -46,7 +48,7 @@ module Hansa
       scored_languages = [] of ScoredLanguage
 
       known_languages.each do |language|
-        score = CLASSIFIER.languages_log_probabilities[language]
+        score = languages_log_probabilities[language]
         score += tokens_log_probability(tokens, language)
         scored_languages << {language, score}
       end
@@ -56,7 +58,7 @@ module Hansa
 
     def tokens_log_probability(tokens : Array(String), language : String) : Float64
       log_probability = 0.0
-      language_tokens = CLASSIFIER.tokens_log_probabilities.fetch(language, DEFAULT_TOKEN_PROBABILITIES)
+      language_tokens = tokens_log_probabilities.fetch(language, DEFAULT_TOKEN_PROBABILITIES)
       default_probability = DEFAULT_TOKEN_PROBABILITY
 
       tokens.each do |token|
@@ -197,13 +199,20 @@ module Hansa
     end
   end
 
-  CLASSIFIER = Classifier.from_json(BakedData.get("/frequencies.json").gets_to_end)
+  @@classifier : Classifier?
+
+  # The classifier is built from ~7.9MB of baked JSON, so it is
+  # parsed on first use instead of at require time: programs that
+  # never classify don't pay for it.
+  def self.classifier : Classifier
+    @@classifier ||= Classifier.from_json(BakedData.get("/frequencies.json").gets_to_end)
+  end
 
   def self.classify(code : String) : String
     if code.empty?
       "Python" # whatever
     else
-      CLASSIFIER.classify(scrub(code)).last[0]
+      classifier.classify(scrub(code)).last[0]
     end
   end
 

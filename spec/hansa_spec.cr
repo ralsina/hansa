@@ -147,7 +147,7 @@ describe Hansa do
   end
 
   describe "Classifier" do
-    classifier = Hansa::CLASSIFIER
+    classifier = Hansa.classifier
 
     it "knows exactly 100 languages" do
       classifier.known_languages.size.should eq(100)
